@@ -32,6 +32,8 @@ void* writer(){
 
 	printf("Writer\n");
 	total->arr[0]++;
+
+
 	/*sem_wait(&WriteMu);
 	total->arr[1]++;
 	if(total->arr[1] == 1){
@@ -58,6 +60,7 @@ void* writer(){
 void* reader(){
 
 	printf("Read\n");
+
 	/*sem_wait(&Read);
 	sem_wait(&ReadMu);
 	total->arr[2]++;
@@ -110,15 +113,11 @@ int main(){
 	//iffy probably the broken part
 	//Defines 40 total thread Id's
 	pthread_t	tid[40];
-	pthread_attr_t	attr[1];     // attribute pointer array 
 
 	//flush out the buffer
 	fflush(stdout);
 
-	// Required to schedule thread independently.
-	pthread_attr_init(&attr[0]);
-	pthread_attr_setscope(&attr[0], PTHREAD_SCOPE_SYSTEM);  
-	// end to schedule thread independently 
+
 
 	//reading in the input file allowing for fine
 	//tuning of reader and writer inputs
@@ -149,10 +148,11 @@ int main(){
 
 			//Identify the use case as a reader or writer and generate the thread
 			if(rw[0] == 'r'){
-				pthread_create(&tid[i], &attr[0], reader, NULL);
+				pthread_create(&tid[i], NULL, reader, NULL);
+				printf("Read done?\n");
 				sleep(num);
 			}else if(rw[0] == 'w'){
-				pthread_create(&tid[i], &attr[0], writer, NULL);
+				pthread_create(&tid[i], NULL, writer, NULL);
 				sleep(num);
 			}else{
 				printf("There is an error with the input file \n");
