@@ -27,10 +27,11 @@ sem_t ReadMu, WriteMu, Mu, Read, Write;
 
 
 
-//create the producer funtion
+//create the writer funtion
 void* writer(){
 
 	printf("Writer\n");
+	total->arr[0]++;
 	/*sem_wait(&WriteMu);
 	total->arr[1]++;
 	if(total->arr[1] == 1){
@@ -53,7 +54,7 @@ void* writer(){
 	sem_post(&WriteMu);
 */
 }
-//create the consumer function
+//create the reader function
 void* reader(){
 
 	printf("Read\n");
@@ -103,40 +104,50 @@ int main(){
 	sem_init(&Mu, 0, 1);
 	sem_init(&Read, 0, 1);
 	sem_init(&Write, 0, 1);
+	
+
 	//define the pthreads
-
-
-
-	pthread_t	tid[40];     // process id for thread 1 
+	//iffy probably the broken part
+	//Defines 40 total thread Id's
+	pthread_t	tid[40];
 	pthread_attr_t	attr[1];     // attribute pointer array 
 
 	//flush out the buffer
 	fflush(stdout);
+
 	// Required to schedule thread independently.
 	pthread_attr_init(&attr[0]);
 	pthread_attr_setscope(&attr[0], PTHREAD_SCOPE_SYSTEM);  
 	// end to schedule thread independently 
 
-	//Creating pthreads
-	//printf("Pre pro con \n");
-
+	//reading in the input file allowing for fine
+	//tuning of reader and writer inputs
 	FILE* fp = fopen("mydata.dat", "r");
+	//define some desired variables
 	char rw[1];
 	char c[10];
+	//sleep time
 	int num = 0;
+	//for loop definition
 	int i = 0;
+	//defines the maximum numof threads currently
 	int count = 40;
+	//set the chared memory to default values of 0
 	total->arr[0] = 0;
 	total->arr[1] = 0;
 	total->arr[2] = 0;
 
+	//loop through the file spiting out pthreads for each reader and writer as desired
 	for(;i<40; i++){
+		//chcek end of file
 		if (fscanf(fp, "%s", &rw) != EOF)
 		{
+			//gather the sleep time
 			fscanf(fp, "%s", &c);
 			num = atoi(c);
 			//printf("%s %d\n", &rw, num);
 
+			//Identify the use case as a reader or writer and generate the thread
 			if(rw[0] == 'r'){
 				pthread_create(&tid[i], &attr[0], reader, NULL);
 				sleep(num);
@@ -146,27 +157,28 @@ int main(){
 			}else{
 				printf("There is an error with the input file \n");
 			}
-
+		//break out of the loop early and define how many threads exist
 		}else{
 			count = i;
 			break;
 		}
 	}
+	//close the input file
 	fclose(fp);
-	printf("writes, %d, total read/writes, %d", total->arr[0], count);
+	//printf("writes, %d, total read/writes, %d", total->arr[0], count);
 
  	// Wait for the threads to finish 
  	for(i = 0; i<count; i++){
  		pthread_join(tid[i], NULL);
  	}
-
+ 	//output to see if proper test cases resulted
+ 	printf("writes, %d, total read/writes, %d", total->arr[0], count);
 
 	//clear the shared memory	
 	if (shmdt(total) == -1){
       perror ("shmdt");
       exit (-1);
     }
-
     shmctl(shmid, IPC_RMID, NULL); 
 
     //destroy the semaphores
