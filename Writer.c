@@ -30,11 +30,7 @@ sem_t ReadMu, WriteMu, Mu, Read, Write;
 //create the writer funtion
 void* writer(){
 
-	printf("Writer\n");
-	total->arr[0]++;
-
-
-	/*sem_wait(&WriteMu);
+	sem_wait(&WriteMu);
 	total->arr[1]++;
 	if(total->arr[1] == 1){
 		sem_wait(&Read);
@@ -44,7 +40,7 @@ void* writer(){
 	
 	sleep(2);
 	total->arr[0]++;
-	printf("Read Updated%d\n",total->arr[0]);
+	printf("Value updated to %d\n",total->arr[0]);
 
 	sem_post(&Write);
 
@@ -54,14 +50,12 @@ void* writer(){
 		sem_post(&Read);
 	}
 	sem_post(&WriteMu);
-*/
+
 }
 //create the reader function
 void* reader(){
 
-	printf("Read\n");
-
-	/*sem_wait(&Read);
+	sem_wait(&Read);
 	sem_wait(&ReadMu);
 	total->arr[2]++;
 	if(total->arr[2] == 1){
@@ -70,15 +64,16 @@ void* reader(){
 	sem_post(&ReadMu);
 	sem_post(&Read);
 
-	printf("%d ", total->arr[0]);
 	sleep(3);
+	printf("%d: Read in\n", total->arr[0]);
+	
 
 	sem_wait(&ReadMu);
 	total->arr[2]--;
 	if(total->arr[2] == 0){
 		sem_post(&Mu);
 	}
-	sem_post(&ReadMu);*/
+	sem_post(&ReadMu);
 }
 
 
