@@ -149,7 +149,7 @@ int main(){
 			//Identify the use case as a reader or writer and generate the thread
 			if(rw[0] == 'r'){
 				pthread_create(&tid[i], NULL, reader, NULL);
-				printf("Read done?\n");
+				//printf("Read done?\n");
 				sleep(num);
 			}else if(rw[0] == 'w'){
 				pthread_create(&tid[i], NULL, writer, NULL);
