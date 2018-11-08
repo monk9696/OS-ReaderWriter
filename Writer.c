@@ -1,4 +1,13 @@
 //Nicklaus Krems UID# 36935302
+
+// CHANGELOG
+// Nov 8, 2018 - Harsha Kuchampudi
+//		- Updated include statements to include unistd.h for sleep
+//		- Added function prototypes for reader and writer functions
+//		- 
+// Nov 5, 2018 - Nicklaus Krems
+//		- Initially created files
+
 #define _REENTRANT
 #include <pthread.h>	// Thread library
 #include <stdio.h>		// Standard input and output
