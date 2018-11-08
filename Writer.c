@@ -9,6 +9,8 @@
 //		- Fixed compiler warning when compiled with -Wall
 //		- Added Makefile for simpler building
 //		- Using ftok() for SHMKEY to prevent collisions
+//		- Fixed fscanf() so that references are not used
+//		- Minor misc fixes
 // Nov 5, 2018 - Nicklaus Krems
 //		- Initially created files
 
