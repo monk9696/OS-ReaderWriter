@@ -1,14 +1,15 @@
 //Nicklaus Krems UID# 36935302
 #define _REENTRANT
-#include <pthread.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <semaphore.h>
-#include <stdlib.h>
+#include <pthread.h>	// Thread library
+#include <stdio.h>		// Standard input and output
+#include <sys/types.h>	// Types header
+#include <sys/ipc.h>	// Required for shmget
+#include <sys/shm.h>	// Required for shmget
+#include <sys/wait.h>	// Wait function call
+#include <fcntl.h>		// Control
+#include <semaphore.h>	// POSIX semaphores
+#include <stdlib.h>		// Standard library
+#include <unistd.h>		// For sleep function
 
 //Define our shmkey
 #define SHMKEY ((key_t) 1400)
