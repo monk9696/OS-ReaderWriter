@@ -11,6 +11,10 @@
 #include <stdlib.h>		// Standard library
 #include <unistd.h>		// For sleep function
 
+// Define function prototypes
+void *writer();
+void *reader();
+
 //Define our shmkey
 #define SHMKEY ((key_t) 1400)
 
@@ -25,8 +29,6 @@ shared_mem *total;
 
 //define our semaphore names
 sem_t ReadMu, WriteMu, Mu, Read, Write;
-
-
 
 //create the writer funtion
 void* writer(){
