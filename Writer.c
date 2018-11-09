@@ -1,121 +1,155 @@
 //Nicklaus Krems UID# 36935302
-#define _REENTRANT
-#include <pthread.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <semaphore.h>
-#include <stdlib.h>
 
-//Define our shmkey
-#define SHMKEY ((key_t) 1400)
+// CHANGELOG
+// Nov 8, 2018 - Harsha Kuchampudi
+//		- Updated include statements to include unistd.h for sleep
+//		- Added function prototypes for reader and writer functions
+//		- Cleaned variable names and added comments where necessary
+//		- Added pThread attributes and set pThread scope
+//		- Fixed compiler warning when compiled with -Wall
+//		- Added Makefile for simpler building
+//		- Using ftok() for SHMKEY to prevent collisions
+//		- Fixed fscanf() so that references are not used
+//		- Minor misc fixes
+// Nov 5, 2018 - Nicklaus Krems
+//		- Initially created files
+
+#define _REENTRANT
+#include <pthread.h>	// Thread library
+#include <stdio.h>		// Standard input and output
+#include <sys/types.h>	// Types header
+#include <sys/ipc.h>	// Required for shmget
+#include <sys/shm.h>	// Required for shmget
+#include <sys/wait.h>	// Wait function call
+#include <fcntl.h>		// Control
+#include <semaphore.h>	// POSIX semaphores
+#include <stdlib.h>		// Standard library
+#include <unistd.h>		// For sleep function
+
+// Define function prototypes
+void *writer();
+void *reader();
 
 //define our read write counts
 typedef struct
 {
-	int arr[3];
+	int readerCount;	// Stores the number of readers
+	int writerCount;	// Stores the number of writers	
+	int totalCount;		// Stores the total count
 } shared_mem;
 
-//declare the couts
-shared_mem *total;
+shared_mem *total;		// Shared memory to communicate
+key_t SHMKEY;			// Shared memory key
+sem_t sem_reader;		// Lock for the reader
+sem_t sem_writer; 		// Lock for the writer
+sem_t readcount_lock;	// Mutex to protect readerCount
+sem_t writecount_lock;	// Mutex to protect writerCount
+pthread_t tid[40];		// Store the thread ids
+pthread_attr_t attr;    // Store thread attributes
 
-//define our semaphore names
-sem_t ReadMu, WriteMu, Mu, Read, Write;
+// Function: Writer
+// Description: Writer implementation
+void *writer(){
 
-
-
-//create the writer funtion
-void* writer(){
-
-	sem_wait(&WriteMu);
-	total->arr[1]++;
-	if(total->arr[1] == 1){
-		sem_wait(&Read);
-	}
-	sem_post(&WriteMu);
-	sem_wait(&Write);
+	sem_wait(&writecount_lock);
+	total -> writerCount++;
+	if (total -> writerCount == 1)
+		sem_wait(&sem_reader);
+	sem_post(&writecount_lock);
+	sem_wait(&sem_writer);
 	
+	// CRITICAL SECTION START
 	sleep(2);
-	total->arr[0]++;
-	printf("Value updated to %d\n",total->arr[0]);
+	total -> totalCount++;
+	printf("Value updated to %d\n",total -> totalCount);
+	// CRITICAL SECTION END
 
-	sem_post(&Write);
+	sem_post(&sem_writer);
+	sem_wait(&writecount_lock);
+	total -> writerCount--;
+	if (total -> writerCount == 0)
+		sem_post(&sem_reader);
+	sem_post(&writecount_lock);
 
-	sem_wait(&WriteMu);
-	total->arr[1]--;
-	if(total->arr[1] == 0){
-		sem_post(&Read);
-	}
-	sem_post(&WriteMu);
+	// Return NULL
+	return NULL;
 
 }
-//create the reader function
-void* reader(){
 
-	sem_wait(&Read);
-	sem_wait(&ReadMu);
-	total->arr[2]++;
-	if(total->arr[2] == 1){
-		sem_wait(&Mu);
-	}
-	sem_post(&ReadMu);
-	sem_post(&Read);
+// Function: Reader
+// Description: Reader implementation
+void *reader(){
 
+	sem_wait(&sem_reader);
+	sem_wait(&readcount_lock);
+	total -> readerCount++;
+	if (total -> readerCount == 1)
+		sem_wait(&sem_writer);
+	sem_post(&readcount_lock);
+	sem_post(&sem_reader);
+
+	// CRITICAL SECTION START
 	sleep(3);
-	printf("%d: Read in\n", total->arr[0]);
-	
+	printf("%d: Read in\n", total -> totalCount);
+	// CRITICAL SECTION END
 
-	sem_wait(&ReadMu);
-	total->arr[2]--;
-	if(total->arr[2] == 0){
-		sem_post(&Mu);
-	}
-	sem_post(&ReadMu);
+	sem_wait(&readcount_lock);
+	total -> readerCount--;
+	if (total -> readerCount == 0)
+		sem_post(&sem_writer);
+	sem_post(&readcount_lock);
+
+	// Return NULL
+	return NULL;
+
 }
 
-
-
+// Function: main
+// Description: Main application logic
 int main(){
-	//declares the needed variables for shared memory
-	int   shmid, ID,status;
-	char *shmadd;
-	shmadd = (char *) 0;
 
-	//sets the area of shared memory
-	if ((shmid = shmget (SHMKEY, sizeof(int), IPC_CREAT | 0666)) < 0)
+	// Shared memory ID and address for allocating
+	// and attaching shared memory	
+	int shared_mem_id;
+	char *shared_mem_addr = NULL;
+
+	// Create and set the shared memory key
+	SHMKEY = ftok(".", 'a');
+	// Allocate the shared memory segment and make sure
+	// that it is created properly
+	if ((shared_mem_id = shmget (SHMKEY, sizeof(total), IPC_CREAT | 0666)) < 0)
     {
     	perror ("shmget");
 		exit (1);
 	}
-	//allows shared memory to be accessed by the forks
-	if ((total = (shared_mem *) shmat (shmid, shmadd, 0)) == (shared_mem *) -1) {
+	// Attach the shared memory
+	if ((total = (shared_mem *) shmat (shared_mem_id, shared_mem_addr, 0)) == (shared_mem *) -1) {
     	perror ("shmat");
 		exit (0);
 	}
 
-	//initiate the semaphores
-	sem_init(&ReadMu, 0, 1);
-	sem_init(&WriteMu, 0, 1);
-	sem_init(&Mu, 0, 1);
-	sem_init(&Read, 0, 1);
-	sem_init(&Write, 0, 1);
-	
+	// Initialize the shared memory values
+	total -> readerCount = 0;
+	total -> writerCount = 0;
+	total -> totalCount = 0;
 
-	//define the pthreads
-	//iffy probably the broken part
-	//Defines 40 total thread Id's
-	pthread_t	tid[40];
+	// Initialize the global semaphores so that they all have a 
+	// value of 1. Additionally, the second parameter identifies
+	// that the semaphores will be shared between threads
+	sem_init(&sem_reader, 0, 1);
+	sem_init(&sem_writer, 0, 1);
+	sem_init(&readcount_lock, 0, 1);
+	sem_init(&writecount_lock, 0, 1);
+	
+	// Set thread attributes
+    pthread_attr_init(&attr);
+    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
 
 	//flush out the buffer
 	fflush(stdout);
 
-
-
-	//reading in the input file allowing for fine
-	//tuning of reader and writer inputs
+	// Reading in the input file allowing for fine
+	// tuning of reader and writer inputs
 	FILE* fp = fopen("mydata.dat", "r");
 	//define some desired variables
 	char rw[1];
@@ -126,18 +160,14 @@ int main(){
 	int i = 0;
 	//defines the maximum numof threads currently
 	int count = 40;
-	//set the chared memory to default values of 0
-	total->arr[0] = 0;
-	total->arr[1] = 0;
-	total->arr[2] = 0;
 
 	//loop through the file spiting out pthreads for each reader and writer as desired
 	for(;i<40; i++){
 		//chcek end of file
-		if (fscanf(fp, "%s", &rw) != EOF)
+		if (fscanf(fp, "%s", rw) != EOF)
 		{
 			//gather the sleep time
-			fscanf(fp, "%s", &c);
+			fscanf(fp, "%s", c);
 			num = atoi(c);
 			//printf("%s %d\n", &rw, num);
 
@@ -166,25 +196,28 @@ int main(){
  	for(i = 0; i<count; i++){
  		pthread_join(tid[i], NULL);
  	}
- 	//output to see if proper test cases resulted
- 	printf("writes, %d, total read/writes, %d", total->arr[0], count);
 
-	//clear the shared memory	
+ 	// Output to see if proper test cases resulted
+ 	printf("writes, %d, total read/writes, %d\n", total -> totalCount, count);
+
+	// Clear the shared memory	
 	if (shmdt(total) == -1){
       perror ("shmdt");
       exit (-1);
     }
-    shmctl(shmid, IPC_RMID, NULL); 
+    shmctl(shared_mem_id, IPC_RMID, NULL); 
 
-    //destroy the semaphores
-	sem_destroy(&ReadMu);
-	sem_destroy(&WriteMu);
-	sem_destroy(&Mu);
-	sem_destroy(&Read);
-	sem_destroy(&Write);
+    // Destroy the created semaphores
+	sem_destroy(&sem_reader);
+	sem_destroy(&sem_writer);
+	sem_destroy(&readcount_lock);
+	sem_destroy(&writecount_lock);
 
-	//kill the pthreads and exit the program
+	// Kill the pthreads and exit the program
 	pthread_exit(NULL);
+
+	// Exit successfully
+	exit(0);
 
 }
 
